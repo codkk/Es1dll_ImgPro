@@ -20,24 +20,24 @@ public:
 	bool HalconCreateModel(char* pathname, std::vector<CRect> &vecRoi);				 //创建模板 传入原始图像，和多个ROI
 	bool HalconFind_A(BYTE *pImage, int imH, int imW, int &iNum,double& lfMinScore); //在pImage中定位模板，得到个数iNum, 坐标（pX,pY,pAng), 匹配度(pScore),参数：只接受单通道图像
 	bool HalconFind_B(char* pPathName, int &iNum, double& lfMinScore); //从路径中加载图像，pImage中定位模板，得到个数iNum, 坐标（pX,pY,pAng), 匹配度(pScore),参数：只接受单通道图像
-
 	bool SetHalconDispWnd(HWND wnd, CRect showRect);
+	int GetTargetNum();  //获取查找到的目标数
+	bool GetMaxScoreTarget(double &x, double&y, double&r, double&maxScoreOut);
+	void GetModelPt(double&x, double&y);  //获取模板的中心坐标
+	int GetIndex();						  //获取当前算法对象的序号也是相机的序号
 	
+	
+	//V1.0 接口
 	bool DrawDetectRoi();						//框选并设置检测模板区域
 	bool DrawDetectCodebarRoi();				//框选并设置检测二维码区域
 	void ShowDetectArea(bool bshow);
 	bool FindBarCode(CString &strCode, bool bGetImage);			//检测二维码 bGetImage:是否从相机获取新图像
 	bool CreateModel();							//创建模板
 	bool CreateModelFromModel();				//通过识别图像，自动框选模板区域， 创建模板
-	bool FindModel();	 //查找模板
-	int GetTargetNum();  //获取查找到的目标数
+	bool FindModel();							//查找模板
 	bool GetTarget(int ptIdx, double&x, double&y, double&r); //获取第n个目标的 x, y, theta
 	bool GetTargetRel(int ptIdx, double& x, double &y, double &r); //获取第n个目标相对于模板的偏移量pix
 	bool GetTargetRelSp(int ptIdx, double& x, double &y, double &r); //获取第n个目标相对于模板的偏移量物理量mm
-	
-	bool GetMaxScoreTarget(double &x, double&y, double&r, double&maxScoreOut);
-	void GetModelPt(double&x, double&y);  //获取模板的中心坐标
-	int GetIndex();						  //获取当前算法对象的序号也是相机的序号
 	void GrabOneImage();				  //采集一次图像并显示
 	void LoadImageFromFile();			  //文件中加载图像并显示
 	void SetManuMode(bool bMan);		  //设置为手动加载图像模式		
@@ -50,6 +50,21 @@ public:
 	bool SaveImage(char* path); //保存当前图像
 	void SetFullScreen(bool bFull); //设置显示全部
 	void CloseCamera(); //关闭相机
+
+	//V2.0接口（对应着使用步骤）
+	//框选转接板上特征模板及检索区域(只有当移动过相机和平台的相对位置，才需要调用)
+	bool DrawBaseMark();
+	//框选产品上特征模板及检索区域（只有当移动过相机和平台的相对位置，才需要调用）
+	bool DrawDutMark();
+
+	//拍照识别产品上模板（获得偏移量）
+	bool FindDutMark(double& spx, double &spy, double &ang);
+	//拍照识别转接板上模板 （获得偏移量）
+	bool FindBaseMark(double& spx, double &spy, double &ang);
+
+	//计算产品偏移量与转接板上偏移量总和减掉保存的补偿量，得到移动平台的移动量（这一步可以在外面程序做）
+
+
 private:
 	ImgProcess *m_pImgProcess;
 };

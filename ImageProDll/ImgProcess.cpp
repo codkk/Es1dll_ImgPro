@@ -1432,6 +1432,285 @@ void ImgProcess::SetManuMode(bool bMan)
 	m_bManu = bMan;
 }
 
+bool ImgProcess::DrawBaseMark()
+{
+	//
+	try
+	{
+		//显示图像
+		if (!WindowHandle.Length()) return false;
+		ClearWindow(WindowHandle);
+		if (ho_Image.IsInitialized())
+			DispObj(ho_Image, WindowHandle);
+
+		//框选检测范围区域
+		int idex = 0;
+		int idex2 = 0;
+		for (; idex < 2; idex++)
+		{
+			CString strshow;
+			strshow.Format(_T("请框选第%d个检测范围,[确定]：开始框选，右键结束。 [取消]：则中断框选流程。"), idex + 1);
+			if (IDOK != AfxMessageBox(strshow, MB_OKCANCEL))
+			{
+				return false;
+			}
+			HalconCpp::HTuple Row1, Col1, Row2, Col2;
+			SetColor(WindowHandle, "green");
+			SetDraw(WindowHandle, "margin");
+			SetTposition(WindowHandle, HTuple(m_TextRow+150*(idex+ idex2)), HTuple(m_TextCol));
+			WriteString(WindowHandle, "请框选检测范围区域(尽量覆盖可能出现模板的区域)");
+
+			HalconCpp::DrawRectangle1(WindowHandle, &Row1, &Col1, &Row2, &Col2);
+			RectArea areaTmp;
+			if (!Row1.Length())
+			{
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol+10));
+				WriteString(WindowHandle, "框选太小，无法处理");
+				return false;
+			}
+			areaTmp.row1 = (double)Row1.D();
+			areaTmp.col1 = (double)Col1.D();
+			areaTmp.row2 = (double)Row2.D();
+			areaTmp.col2 = (double)Col2.D();
+			int w = areaTmp.col2 - areaTmp.col1;
+			int h = areaTmp.row2 - areaTmp.row1;
+			if (w < 10 || h < 10) //框选范围太小
+			{
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol+10));
+				WriteString(WindowHandle, "框选太小，无法处理");
+				return false;
+			}
+
+			GenRectangle1(&m_ho_BaseROI[idex], Row1, Col1, Row2, Col2);
+			DispObj(m_ho_BaseROI[idex], WindowHandle);
+			areaTmp.bAvalid = true;
+			m_BaseROI[idex] = areaTmp;
+
+			//SaveDetectArea(PATH_DETECTAREA);
+			SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol+10));
+			WriteString(WindowHandle, "成功");
+
+			//框选第n个模板
+			for (; idex2 < 2; idex2++)
+			{
+				strshow.Format(_T("请框选第%d个模板,[确定]：开始框选，右键结束。 [取消]：则中断框选流程。"), idex2 + 1);
+				if (IDOK != AfxMessageBox(strshow, MB_OKCANCEL))
+				{
+					return false;
+				}
+				SetColor(WindowHandle, "green");
+				SetDraw(WindowHandle, "margin");
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol));
+				WriteString(WindowHandle, "请框选模板(mark点)");
+
+				HalconCpp::DrawRectangle1(WindowHandle, &Row1, &Col1, &Row2, &Col2);
+				RectArea areaTmp;
+				if (!Row1.Length())
+				{
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2+1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "框选太小，无法处理");
+					return false;
+				}
+				areaTmp.row1 = (double)Row1.D();
+				areaTmp.col1 = (double)Col1.D();
+				areaTmp.row2 = (double)Row2.D();
+				areaTmp.col2 = (double)Col2.D();
+				int w = areaTmp.col2 - areaTmp.col1;
+				int h = areaTmp.row2 - areaTmp.row1;
+				if (w < 10 || h < 10) //框选范围太小
+				{
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2 + 1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "框选太小，无法处理");
+					return false;
+				}
+				
+				//保存和显示
+				GenRectangle1(&m_ho_BaseModel[idex2], Row1, Col1, Row2, Col2);
+				DispObj(m_ho_BaseModel[idex2], WindowHandle);
+				areaTmp.bAvalid = true;
+				m_BaseModel[idex2] = areaTmp; 
+
+				//制作模板
+				if (!CreateMarkModel(m_ho_BaseModel[idex2], m_hv_BaseModelId[idex2]))
+				{
+					AfxMessageBox(_T("创建Mark模板失败"));
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2 + 1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "创建Mark模板失败");
+					return false;
+				}
+
+				//SaveDetectArea(PATH_DETECTAREA);
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol + 10));
+				WriteString(WindowHandle, "成功");
+			}
+		}
+
+	}
+	catch (HalconCpp::HException & except)
+	{
+		ShowException(except);
+		return false;
+	}
+	return true;
+}
+
+bool ImgProcess::DrawDutMark()
+{
+	try
+	{
+		//显示图像
+		if (!WindowHandle.Length()) return false;
+		ClearWindow(WindowHandle);
+		if (ho_Image.IsInitialized())
+			DispObj(ho_Image, WindowHandle);
+
+		//框选检测范围区域
+		int idex = 0;
+		int idex2 = 0;
+		for (; idex < 2; idex++)
+		{
+			CString strshow;
+			strshow.Format(_T("请框选第%d个检测范围,[确定]：开始框选，右键结束。 [取消]：则中断框选流程。"), idex + 1);
+			if (IDOK != AfxMessageBox(strshow, MB_OKCANCEL))
+			{
+				return false;
+			}
+			HalconCpp::HTuple Row1, Col1, Row2, Col2;
+			SetColor(WindowHandle, "green");
+			SetDraw(WindowHandle, "margin");
+			SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol));
+			WriteString(WindowHandle, "请框选检测范围区域(尽量覆盖可能出现模板的区域)");
+
+			HalconCpp::DrawRectangle1(WindowHandle, &Row1, &Col1, &Row2, &Col2);
+			RectArea areaTmp;
+			if (!Row1.Length())
+			{
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol + 10));
+				WriteString(WindowHandle, "框选太小，无法处理");
+				return false;
+			}
+			areaTmp.row1 = (double)Row1.D();
+			areaTmp.col1 = (double)Col1.D();
+			areaTmp.row2 = (double)Row2.D();
+			areaTmp.col2 = (double)Col2.D();
+			int w = areaTmp.col2 - areaTmp.col1;
+			int h = areaTmp.row2 - areaTmp.row1;
+			if (w < 10 || h < 10) //框选范围太小
+			{
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol + 10));
+				WriteString(WindowHandle, "框选太小，无法处理");
+				return false;
+			}
+
+			GenRectangle1(&m_ho_DutROI[idex], Row1, Col1, Row2, Col2);
+			DispObj(m_ho_DutROI[idex], WindowHandle);
+			areaTmp.bAvalid = true;
+			m_DutROI[idex] = areaTmp;
+
+			//SaveDetectArea(PATH_DETECTAREA);
+			SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol + 10));
+			WriteString(WindowHandle, "成功");
+
+			//框选第n个模板
+			for (; idex2 < 2; idex2++)
+			{
+				strshow.Format(_T("请框选第%d个模板,[确定]：开始框选，右键结束。 [取消]：则中断框选流程。"), idex2 + 1);
+				if (IDOK != AfxMessageBox(strshow, MB_OKCANCEL))
+				{
+					return false;
+				}
+				SetColor(WindowHandle, "green");
+				SetDraw(WindowHandle, "margin");
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol));
+				WriteString(WindowHandle, "请框选模板(mark点)");
+
+				HalconCpp::DrawRectangle1(WindowHandle, &Row1, &Col1, &Row2, &Col2);
+				RectArea areaTmp;
+				if (!Row1.Length())
+				{
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2 + 1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "框选太小，无法处理");
+					return false;
+				}
+				areaTmp.row1 = (double)Row1.D();
+				areaTmp.col1 = (double)Col1.D();
+				areaTmp.row2 = (double)Row2.D();
+				areaTmp.col2 = (double)Col2.D();
+				int w = areaTmp.col2 - areaTmp.col1;
+				int h = areaTmp.row2 - areaTmp.row1;
+				if (w < 20 || h < 20) //框选范围太小
+				{
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2 + 1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "框选太小，无法处理");
+					return false;
+				}
+
+				//保存和显示
+				GenRectangle1(&m_ho_DutModel[idex2], Row1, Col1, Row2, Col2);
+				DispObj(m_ho_DutModel[idex2], WindowHandle);
+				areaTmp.bAvalid = true;
+				m_DutModel[idex2] = areaTmp;
+				//制作模板
+				if (!CreateMarkModel(m_ho_DutModel[idex2], m_hv_DutModelId[idex2]))
+				{
+					AfxMessageBox(_T("创建模板失败"));
+					SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2 + 1)), HTuple(m_TextCol + 10));
+					WriteString(WindowHandle, "创建模板失败");
+					return false;
+				}
+
+				//SaveDetectArea(PATH_DETECTAREA);
+				SetTposition(WindowHandle, HTuple(m_TextRow + 150 * (idex + idex2)), HTuple(m_TextCol + 10));
+				WriteString(WindowHandle, "成功");
+			}
+		}
+
+		
+
+
+	}
+	catch (HalconCpp::HException & except)
+	{
+		ShowException(except);
+		return false;
+	}
+	return true;
+}
+
+bool ImgProcess::CreateMarkModel(HObject Roi, HTuple &hvModel)
+{
+	try
+	{
+		//裁剪模板
+		HObject tmpImage;
+		ReduceDomain(ho_Image, Roi, &tmpImage);
+
+		if (hvModel.Length())
+		{
+			ClearShapeModel(hvModel);
+		}
+		//创建模板
+		HalconCpp::CreateShapeModel(tmpImage, "auto", (HTuple(-20).TupleRad()), HTuple(40).TupleRad(),
+			"auto", "auto", "use_polarity", "auto", "auto", &hvModel);
+	}
+	catch (HalconCpp::HException & except)
+	{
+		ShowException(except);
+		return false;
+	}
+	return true;
+}
+
+bool ImgProcess::FindDutMark(double & spx, double & spy, double & ang)
+{
+	return false;
+}
+
+bool ImgProcess::FindBaseMark(double & spx, double & spy, double & ang)
+{
+	return false;
+}
+
 ImgProcess::ImgProcess()
 {
 	m_bShowDetectArea = true;

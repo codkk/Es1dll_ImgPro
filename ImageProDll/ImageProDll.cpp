@@ -324,3 +324,23 @@ void ImageProDll::CloseCamera()
 {
 	m_pImgProcess->CloseCamera();
 }
+
+bool ImageProDll::DrawBaseMark()
+{
+	return false;
+}
+
+bool ImageProDll::DrawDutMark()
+{
+	return false;
+}
+
+bool ImageProDll::FindDutMark(double & spx, double & spy, double & ang)
+{
+	return false;
+}
+
+bool ImageProDll::FindBaseMark(double & spx, double & spy, double & ang)
+{
+	return false;
+}

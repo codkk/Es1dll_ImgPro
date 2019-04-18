@@ -57,6 +57,21 @@ typedef struct DetectArea{
 	}
 }DetectArea;
 
+typedef struct RectArea {
+	bool bAvalid;  //是否有效
+	int row1;	   //左上角坐标
+	int col1;
+	int row2;	   //右下角坐标
+	int col2;
+	RectArea() {
+		bAvalid = false;
+		row1 = -1;
+		col1 = -1;
+		row2 = -1;
+		col2 = -1;
+	}
+}RectArea;
+
 typedef struct MyPoint2f {
 	double fx;
 	double fy;
@@ -120,6 +135,21 @@ public:
 	void CloseCamera();           //关闭相机
 	void LoadImageFromFile();			  //文件中加载图像并显示
 	void SetManuMode(bool bMan);		  //设置为手动加载图像模式	
+
+	//v2.0接口
+	//框选转接板上特征模板及检索区域(只有当移动过相机和平台的相对位置，才需要调用)
+	bool DrawBaseMark();
+	//框选产品上特征模板及检索区域（只有当移动过相机和平台的相对位置，才需要调用）
+	bool DrawDutMark();
+	//制作模板
+	bool CreateMarkModel(HObject Roi, HTuple &hvModel);
+
+	//拍照识别产品上模板（获得偏移量）
+	bool FindDutMark(double& spx, double &spy, double &ang);
+	//拍照识别转接板上模板 （获得偏移量）
+	bool FindBaseMark(double& spx, double &spy, double &ang);
+
+
 public:
 	
 	static int g_num;
@@ -200,4 +230,21 @@ private:
 	double m_lfRotX[CALIBRAT_PT_NUM]; //用于标定的图像坐标x
 	double m_lfRotY[CALIBRAT_PT_NUM];
 	bool m_bIsCaliedRot;   //是否成功标定旋转
+
+	//V2.0  
+	//[转接板]两个模板和检索区域
+	RectArea m_BaseROI[2]; //两个检索区域
+	RectArea m_BaseModel[2]; //两个模板区域
+	HObject m_ho_BaseROI[2]; //halcon类型的检索区域
+	HObject m_ho_BaseModel[2]; //halcon类型的模板区域
+	HTuple m_hv_BaseModelId[2]; //模板
+
+	//[产品]的两个模板和检索区域
+	RectArea m_DutROI[2]; //两个检索区域
+	RectArea m_DutModel[2]; //两个模板区域
+	HObject m_ho_DutROI[2]; //halcon类型的检索区域
+	HObject m_ho_DutModel[2]; //halcon类型的模板区域
+	HTuple m_hv_DutModelId[2]; //模板
+
+
 };
